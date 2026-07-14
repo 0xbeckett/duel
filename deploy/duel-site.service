@@ -1,0 +1,12 @@
+[Unit]
+Description=RALLY (duel) static site server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -m http.server 8155 --bind 127.0.0.1 --directory /home/beckett/.local/share/duel-site
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
