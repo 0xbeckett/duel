@@ -142,6 +142,10 @@
     if (G.puck) {
       G.padX1 = clamp(G.padX1, geo.minPadX, geo.maxPadX);
       G.padX2 = clamp(G.padX2, geo.minPadX, geo.maxPadX);
+      // keep the puck in-bounds so a resize/orientation change can't score a
+      // phantom goal by suddenly moving an edge past the puck
+      G.puck.x = clamp(G.puck.x, geo.left + geo.puckR, geo.right - geo.puckR);
+      G.puck.y = clamp(G.puck.y, geo.puckR, H - geo.puckR);
     }
   }
 
@@ -892,9 +896,14 @@
     canvas.addEventListener('pointermove', onPointerMove, { passive: false });
     window.addEventListener('pointerup', onPointerUp);
     window.addEventListener('pointercancel', onPointerUp);
-    // block gestures that would scroll/zoom
-    ['touchstart', 'touchmove', 'gesturestart'].forEach((ev) =>
-      document.addEventListener(ev, (e) => { if (e.cancelable) e.preventDefault(); }, { passive: false }));
+    // Scroll/zoom are already blocked declaratively (touch-action:none,
+    // overscroll-behavior:none, user-scalable=no). Only stop touchmove ON THE
+    // CANVAS during play — doing it document-wide would kill input focus and
+    // button taps in the menu.
+    canvas.addEventListener('touchmove', (e) => { if (e.cancelable) e.preventDefault(); }, { passive: false });
+    // Safari pinch-zoom + double-tap-zoom aren't covered by touch-action; block those.
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach((ev) =>
+      document.addEventListener(ev, (e) => e.preventDefault(), { passive: false }));
     document.addEventListener('dblclick', (e) => e.preventDefault());
 
     // names
