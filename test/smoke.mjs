@@ -85,6 +85,15 @@ ok(await inPlay(), 'HUD shows after starting match');
 // wait out the countdown into play
 await page.waitForTimeout(3600);
 
+// Park P1's paddle against the left wall so the center lane is open — with a
+// human this never happens, but it makes unattended scoring deterministic
+// (otherwise two dead-center paddles can rally near-vertically for a long time).
+const parkP1Left = async () => {
+  await page.mouse.move(20, 760); await page.mouse.down();
+  await page.mouse.move(20, 760); await page.mouse.up();
+};
+await parkP1Left();
+
 // 3. Read persisted match state — proves autosave writes a resumable snapshot.
 const readSave = () => page.evaluate(() => JSON.parse(localStorage.getItem('rally.save.v1')));
 let snap = await readSave();
@@ -131,6 +140,8 @@ await clickN('[data-step="series"][data-dir="-2"]', 2);  // -> 1
 await page.click('#settingsToggle');
 const life0 = (await readSave()).stats;
 await page.click('#playBtn');
+await page.waitForTimeout(3600); // countdown -> play
+await parkP1Left();              // open the lane so a goal lands fast
 // wait for the match to resolve to a win screen (unattended goals accrue)
 await page.waitForSelector('#win:not(.hidden)', { timeout: 30000 });
 ok(true, 'unattended match reaches a win screen');
