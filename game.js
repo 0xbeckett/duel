@@ -591,6 +591,9 @@
     ctx.fillStyle = bg;
     ctx.fillRect(-20, -20, W + 40, H + 40);
 
+    // on the menu, keep the canvas a clean gradient — no arena clutter behind text
+    if (G.phase === 'home') { if (sx || sy) ctx.translate(-sx, -sy); return; }
+
     // center line
     ctx.save();
     ctx.strokeStyle = 'rgba(255,255,255,0.06)';
