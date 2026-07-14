@@ -32,6 +32,19 @@ await page.click('#settingsToggle');
 await page.click('#playBtn');
 await page.waitForTimeout(4200); // through countdown into a live rally
 await page.screenshot({ path: path.join(ROOT, 'test/shot-play.png') });
+
+// win screen: short match + park a paddle so it resolves fast
+await page.click('#pauseBtn'); await page.click('#quitBtn'); await page.waitForTimeout(150);
+await page.click('#settingsToggle');
+for (let i = 0; i < 6; i++) await page.click('[data-step="goals"][data-dir="-1"]');
+for (let i = 0; i < 2; i++) await page.click('[data-step="series"][data-dir="-2"]');
+await page.click('#settingsToggle');
+await page.click('#playBtn');
+await page.waitForTimeout(3600);
+await page.mouse.move(20, 760); await page.mouse.down(); await page.mouse.up();
+await page.waitForSelector('#win:not(.hidden)', { timeout: 30000 });
+await page.waitForTimeout(400);
+await page.screenshot({ path: path.join(ROOT, 'test/shot-win.png') });
 await browser.close();
 server.close();
 console.log('shots written');
