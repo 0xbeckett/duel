@@ -961,6 +961,33 @@
     centerPuck();
     if (window.lucide) lucide.createIcons();
     showHome();
+
+    // Test hook (only when ?test=1) — lets the headless suite drive the puck
+    // into a paddle at extreme speed and assert it can't tunnel through.
+    if (location.search.includes('test=1')) {
+      window.__rally = {
+        G, geo, SP, stepPhysics, FIXED_DT,
+        dims: () => ({ W, H }),
+        // place the puck just off the bottom paddle heading straight down at `mul`x
+        // the max speed, aligned with the paddle, then run `secs` of physics.
+        // Returns the min y-distance the puck kept from crossing the bottom edge.
+        tunnelProbe(mul, secs) {
+          G.phase = 'playing';
+          G.padX1 = W / 2; G.padPrevX1 = W / 2;
+          const sp = SP().max * H * mul;
+          G.puck = { x: W / 2, y: geo.padY1 - geo.puckR - 4, vx: 0, vy: sp };
+          G.speedMul = 999;
+          const steps = Math.ceil(secs / FIXED_DT);
+          for (let i = 0; i < steps; i++) {
+            stepPhysics(FIXED_DT);
+            // a goal (tunnel) flips phase out of 'playing' and recenters the puck
+            if (G.phase !== 'playing') return { crossed: true, finalVY: 0 };
+          }
+          return { crossed: false, finalVY: G.puck.vy };
+        },
+      };
+    }
+
     requestAnimationFrame(frame);
   }
 

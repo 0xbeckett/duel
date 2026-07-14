@@ -105,6 +105,8 @@ ok(await inPlay(), 'resume re-enters the match');
 
 // 6. Play a whole short match end-to-end to exercise the win flow + lifetime
 // tally, then verify reset-series keeps preferences AND lifetime stats.
+await page.click('#pauseBtn');
+await page.waitForSelector('#pause:not(.hidden)');
 await page.click('#quitBtn'); // to menu
 await page.waitForTimeout(150);
 await page.click('#settingsToggle');
