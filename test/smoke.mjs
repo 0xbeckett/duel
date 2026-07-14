@@ -42,8 +42,22 @@ const page = await browser.newPage({ viewport: { width: 390, height: 844 }, devi
 page.on('pageerror', (e) => { console.log('PAGE ERROR:', e.message); failures++; });
 page.on('console', (m) => { if (m.type() === 'error') console.log('console.error:', m.text()); });
 
-await page.goto(base, { waitUntil: 'networkidle' });
+await page.goto(base + '/?test=1', { waitUntil: 'networkidle' });
 await page.waitForTimeout(300);
+
+// 0. No-tunnel physics: drive the puck straight into a centered paddle at up to
+// 6x the game's own max speed and confirm it reflects (never passes through).
+const probe = await page.evaluate(() => {
+  const out = [];
+  for (const mul of [1, 2, 4, 6]) out.push([mul, window.__rally.tunnelProbe(mul, 0.25)]);
+  return out;
+});
+for (const [mul, r] of probe) {
+  ok(!r.crossed && r.finalVY < 0, `puck reflects (no tunnel) at ${mul}x max speed`);
+}
+// reload clean for the rest of the UI-driven suite
+await page.goto(base, { waitUntil: 'networkidle' });
+await page.waitForTimeout(200);
 
 // The game IIFE is private; expose a hook by re-reading its live objects through
 // the DOM events it wires. We drive it purely through the public UI + localStorage,
