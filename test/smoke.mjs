@@ -55,6 +55,10 @@ ok(homeVisible, 'home menu visible on boot');
 const canvasBox = await page.locator('#game').boundingBox();
 ok(canvasBox && canvasBox.width > 300, 'canvas fills viewport');
 
+// #hud is a zero-size container of absolutely-positioned children, so check a
+// sized child (the score) for "in play" instead of the container itself.
+const inPlay = () => page.locator('#hudScore1').isVisible();
+
 // 2. Set names + settings, start a match.
 await page.fill('#name1', 'Ada');
 await page.fill('#name2', 'Bo');
@@ -62,7 +66,7 @@ await page.click('#settingsToggle');
 await page.click('#speedSeg [data-speed="fast"]'); // stress physics at fast speed
 await page.click('#playBtn');
 await page.waitForTimeout(200);
-ok(await page.locator('#hud').isVisible(), 'HUD shows after starting match');
+ok(await inPlay(), 'HUD shows after starting match');
 
 // wait out the countdown into play
 await page.waitForTimeout(3600);
@@ -97,22 +101,43 @@ ok(JSON.stringify(afterReload.match.roundScore) === JSON.stringify(beforeReload.
 
 await resumeBtn.click();
 await page.waitForTimeout(200);
-ok(await page.locator('#hud').isVisible(), 'resume re-enters the match');
+ok(await inPlay(), 'resume re-enters the match');
 
-// 6. Reset series preserves preferences + lifetime stats.
-await page.evaluate(() => {
-  const s = JSON.parse(localStorage.getItem('rally.save.v1'));
-  s.stats = { life1: 3, life2: 5 };
-  localStorage.setItem('rally.save.v1', JSON.stringify(s));
-});
-await page.reload({ waitUntil: 'networkidle' });
-await page.waitForTimeout(300);
+// 6. Play a whole short match end-to-end to exercise the win flow + lifetime
+// tally, then verify reset-series keeps preferences AND lifetime stats.
+await page.click('#quitBtn'); // to menu
+await page.waitForTimeout(150);
+await page.click('#settingsToggle');
+// shrink to first-to-1, best-of-1 so an unattended match resolves quickly
+const clickN = async (sel, n) => { for (let i = 0; i < n; i++) { await page.click(sel); } };
+await clickN('[data-step="goals"][data-dir="-1"]', 6);   // -> 1
+await clickN('[data-step="series"][data-dir="-2"]', 2);  // -> 1
+await page.click('#settingsToggle');
+const life0 = (await readSave()).stats;
+await page.click('#playBtn');
+// wait for the match to resolve to a win screen (unattended goals accrue)
+await page.waitForSelector('#win:not(.hidden)', { timeout: 30000 });
+ok(true, 'unattended match reaches a win screen');
+const afterWin = await readSave();
+ok(afterWin.match === null, 'series-complete clears the resumable match');
+ok((afterWin.stats.life1 + afterWin.stats.life2) === (life0.life1 + life0.life2) + 1,
+   'winning a match increments a lifetime tally');
+
+// back to menu, start again, then reset series and confirm stats survive
+await page.click('#winHomeBtn');
+await page.waitForTimeout(150);
+await page.click('#playBtn');
+await page.waitForTimeout(400);
+await page.click('#pauseBtn');
+await page.waitForTimeout(100);
+await page.click('#quitBtn');
+await page.waitForTimeout(100);
 await page.click('#newGameBtn'); // "Reset series"
 await page.waitForTimeout(150);
 const afterReset = await readSave();
 ok(afterReset.match === null, 'reset clears the in-progress match');
 ok(afterReset.settings.name1 === 'Ada' && afterReset.settings.speed === 'fast', 'reset keeps names + settings');
-ok(afterReset.stats.life1 === 3 && afterReset.stats.life2 === 5, 'reset keeps lifetime stats');
+ok(JSON.stringify(afterReset.stats) === JSON.stringify(afterWin.stats), 'reset keeps lifetime stats');
 
 // 7. Wipe clears everything back to defaults.
 page.on('dialog', (d) => d.accept());

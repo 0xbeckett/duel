@@ -215,11 +215,11 @@
     G.lunge1 = G.lunge2 = 0;
     centerPuck();
     G.winner = 0;
-    saveMatch();
     hideAllOverlays();
     $('hud').classList.remove('hidden');
     syncHud();
     startCountdown(3);
+    saveMatch(); // after phase is 'countdown' so the snapshot is resumable
   }
 
   function nextRound() {
@@ -229,11 +229,11 @@
     G.serveTo = G.winner === 1 ? 2 : 1;
     G.padX1 = G.padX2 = W / 2;
     centerPuck();
-    saveMatch();
     hideAllOverlays();
     $('hud').classList.remove('hidden');
     syncHud();
     startCountdown(3);
+    saveMatch(); // after phase is 'countdown' so the snapshot is resumable
   }
 
   function onGoal(scorer) {
@@ -750,6 +750,7 @@
           }
           G.resumeServe = false;
           setPhase('playing');
+          saveMatch();
         }
       }
     } else if (G.phase === 'goal') {
